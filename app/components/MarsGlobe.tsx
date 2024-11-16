@@ -13,7 +13,11 @@ import {
 
 import { latLngToCartesian } from './utils';
 
-const MarsGlobe = ({ onTileClick }) => {
+const MarsGlobe = () => {
+  // const [hoveredInstanceId, setHoveredInstanceId] = useState<number | null>(
+  //   null
+  // );
+
   const texture = useLoader(TextureLoader, '/mars-texture.jpg');
   const radius = 2; // Radius of the globe
   const tileRadius = 0.0115; // Radius of each tile
@@ -118,14 +122,49 @@ const MarsGlobe = ({ onTileClick }) => {
   }, [hexTileData, colors]);
 
   // Handle tile interactions
-  const handlePointerDown = (event: any) => {
-    event.stopPropagation();
-    const instanceId = event.instanceId;
-    if (instanceId !== undefined) {
-      const tileData = hexTileData[instanceId];
-      onTileClick(tileData.data);
-    }
-  };
+  // const handlePointerDown = (event: any) => {
+  //   event.stopPropagation();
+  //   const instanceId = event.instanceId;
+  //   if (instanceId !== undefined) {
+  //     const tileData = hexTileData[instanceId];
+  //     onTileClick(tileData.data);
+  //   }
+  // };
+
+  // const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+  //   event.stopPropagation();
+  //   setHoveredInstanceId(event.instanceId!);
+  // };
+
+  // const handlePointerOut = () => {
+  //   setHoveredInstanceId(null);
+  // };
+
+  // useFrame(() => {
+  //   if (meshRef.current && colors) {
+  //     const color = new Color();
+  //     for (let i = 0; i < hexTileData.length; i++) {
+  //       if (i === hoveredInstanceId) {
+  //         color.set('hotpink'); // Highlight color on hover
+  //       } else {
+  //         color.set(hexTileData[i].color);
+  //       }
+  //       color.toArray(colors, i * 3);
+  //     }
+  //     if (meshRef.current.geometry.attributes.color) {
+  //       meshRef.current.geometry.attributes.color.needsUpdate = true;
+  //     }
+  //   }
+  // });
+
+  // const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
+  //   event.stopPropagation();
+  //   const instanceId = event.instanceId;
+  //   if (instanceId !== undefined) {
+  //     const tileData = hexTileData[instanceId];
+  //     onTileClick(tileData.data);
+  //   }
+  // };
 
   return (
     <group>
@@ -139,7 +178,9 @@ const MarsGlobe = ({ onTileClick }) => {
       <instancedMesh
         ref={meshRef}
         args={[undefined, undefined, hexTileData.length]}
-        onPointerDown={handlePointerDown}
+        // onPointerDown={handlePointerDown}
+        // onPointerMove={handlePointerMove}
+        // onPointerOut={handlePointerOut}
       >
         <cylinderGeometry args={[tileRadius, tileRadius, 0.0001, 6]} />
         <meshStandardMaterial vertexColors />

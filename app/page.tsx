@@ -1,9 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React, { useState } from 'react';
+import React from 'react';
 
-import { TileInfoModal } from '@components/TileInfoModal';
+// import { TileInfoModal } from '@components/TileInfoModal';
 import { OrbitControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 
@@ -15,18 +15,18 @@ const MarsGlobe = dynamic(() => import('./components/MarsGlobe'), {
 });
 
 export default function HomePage() {
-  const [selectedTile, setSelectedTile] = useState(null);
+  // const [selectedTile, setSelectedTile] = useState(null);
 
-  const handleTileClick = (data: any) => {
-    setSelectedTile(data);
-  };
+  // const handleTileClick = (data: any) => {
+  //   setSelectedTile(data);
+  // };
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Canvas>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />
-        <MarsGlobe onTileClick={handleTileClick} />
+        <MarsGlobe />
         <OrbitControls
           target={[0, 0, 0]} // Set the target point for the camera
           maxDistance={3.5} // Prevent zooming out too far
