@@ -3,24 +3,41 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "react": "19.0.0-rc-66855b96-20241106",
-    "react-dom": "19.0.0-rc-66855b96-20241106",
-    "next": "15.0.3"
+    "@react-three/drei": "^9.116.2",
+    "@react-three/fiber": "^8.17.10",
+    "d3-geo": "^3.1.1",
+    "d3-geo-voronoi": "^2.1.0",
+    "d3-voronoi": "^1.1.4",
+    "h3-js": "^4.1.0",
+    "i": "^0.3.7",
+    "next": "^13.5.7",
+    "npm": "^10.9.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.170.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,json,css,scss,md}": "prettier --write"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@types/d3-voronoi": "^1.1.12",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
     "eslint": "^8",
-    "eslint-config-next": "15.0.3"
+    "eslint-config-next": "15.0.3",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "postcss": "^8",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
