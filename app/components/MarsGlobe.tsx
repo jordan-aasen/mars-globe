@@ -33,7 +33,7 @@ const MarsGlobe = () => {
   // Convert hexagons to 3D meshes
   const hexMeshes = useMemo(() => {
     const hexagonRadius = radius * 1.005; // Slightly larger than the sphere's radius
-    return hexagons.map((hex, index) => {
+    return hexagons.map((hex) => {
       const boundary = h3.cellToBoundary(hex, true); // Boundary in lat/lng
 
       // Exclude the last point (duplicate of the first)
