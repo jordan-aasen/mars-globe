@@ -29,8 +29,8 @@ export default function HomePage() {
         <MarsGlobe />
         <OrbitControls
           target={[0, 0, 0]} // Set the target point for the camera
-          maxDistance={3.5} // Prevent zooming out too far
-          minDistance={2} // Prevent zooming in too close
+          maxDistance={6} // Prevent zooming out too far
+          minDistance={1.5} // Prevent zooming in too close
           enableZoom={true}
           enablePan={false}
           enableDamping={true}

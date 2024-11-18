@@ -1,190 +1,111 @@
-'use client';
-
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 
 import { useLoader } from '@react-three/fiber';
+import * as h3 from 'h3-js';
 import {
-  Color,
-  InstancedBufferAttribute,
-  InstancedMesh,
-  Object3D,
+  BufferGeometry,
+  DoubleSide,
+  Float32BufferAttribute,
   TextureLoader,
+  Vector3,
 } from 'three';
 
-import { latLngToCartesian } from './utils';
-
 const MarsGlobe = () => {
-  // const [hoveredInstanceId, setHoveredInstanceId] = useState<number | null>(
-  //   null
-  // );
-
-  const texture = useLoader(TextureLoader, '/mars-texture.jpg');
   const radius = 2; // Radius of the globe
-  const tileRadius = 0.0115; // Radius of each tile
+  const resolution = 2; // H3 resolution level
+  const texture = useLoader(TextureLoader, '/mars-texture.jpg');
 
-  // Generate tile data
-  const hexTileData = useMemo(() => {
-    const tiles = [];
-    const tileWidth = tileRadius * Math.sqrt(3); // Width of a hex tile
-    let previousNumTilesInRow = null;
-    let cumulativeOffsetLng = 0;
+  // Generate hexagon indexes
+  const hexagons = useMemo(() => {
+    // Fetch base cells (res 0)
+    const baseCells = h3.getRes0Cells();
+    console.log('baseCells', baseCells);
 
-    // Loop over latitudes from -90 to 90 degrees
-    for (let lat = -90; lat <= 90; lat += 0.5) {
-      const latRadians = (lat * Math.PI) / 180; // Convert to radians
-      const rowRadius = radius * Math.cos(latRadians); // Adjust radius for curvature
-
-      // Calculate circumference at the current latitude
-      const circumference = 2 * Math.PI * rowRadius;
-
-      // Calculate the number of tiles that can fit around this latitude
-      const numTilesInRow = Math.max(1, Math.floor(circumference / tileWidth));
-
-      // Calculate angular steps
-      const deltaLngCurrRow = (2 * Math.PI) / numTilesInRow;
-
-      if (previousNumTilesInRow !== null) {
-        const deltaLngPrevRow = (2 * Math.PI) / previousNumTilesInRow;
-
-        if (numTilesInRow !== previousNumTilesInRow) {
-          // Calculate the difference in angular steps
-          const deltaTheta = 0.5 * (deltaLngPrevRow - deltaLngCurrRow);
-
-          // Adjust cumulative offset
-          cumulativeOffsetLng += deltaTheta;
-        } else {
-          // Alternate offset to align tiles
-          cumulativeOffsetLng += deltaLngCurrRow / 2;
-        }
-
-        // Keep offset within 0 to 2π
-        cumulativeOffsetLng %= 2 * Math.PI;
-      } else {
-        cumulativeOffsetLng = 0; // No offset for the first row
-      }
-
-      // Generate tiles for the current row
-      for (let tileIndex = 0; tileIndex < numTilesInRow; tileIndex++) {
-        const lngRadians = tileIndex * deltaLngCurrRow + cumulativeOffsetLng;
-        const lngDegrees = (lngRadians * 180) / Math.PI; // Convert to degrees
-
-        const position = latLngToCartesian(lat, lngDegrees, radius);
-        tiles.push({
-          position,
-          data: { lat, lng: lngDegrees },
-          color: new Color(`hsl(${Math.random() * 360}, 100%, 50%)`),
-        });
-      }
-
-      // Update previous row tile count
-      previousNumTilesInRow = numTilesInRow;
-    }
-    return tiles;
-  }, [radius, tileRadius]);
-
-  const meshRef = useRef<InstancedMesh>(null);
-  const tempObject = new Object3D();
-
-  // Prepare color attribute
-  const colors = useMemo(() => {
-    const colorArray = new Float32Array(hexTileData.length * 3);
-    hexTileData.forEach((tile, i) => {
-      tile.color.toArray(colorArray, i * 3);
+    // Collect all hexagons for the given resolution
+    let allHexagons: string[] = [];
+    baseCells.forEach((cell) => {
+      const children = h3.cellToChildren(cell, resolution);
+      allHexagons = allHexagons.concat(children);
     });
-    return colorArray;
-  }, [hexTileData]);
 
-  // Set up the positions and colors of instances
-  useEffect(() => {
-    if (meshRef.current) {
-      const mesh = meshRef.current;
+    return allHexagons;
+  }, [resolution]);
 
-      hexTileData.forEach((tile, i) => {
-        const { position } = tile;
-        tempObject.position.set(position[0], position[1], position[2]);
+  // Convert hexagons to 3D meshes
+  const hexMeshes = useMemo(() => {
+    const hexagonRadius = radius * 1.005; // Slightly larger than the sphere's radius
+    return hexagons.map((hex, index) => {
+      const boundary = h3.cellToBoundary(hex, true); // Boundary in lat/lng
 
-        // Orient the tile to face outward from the sphere's center
-        tempObject.lookAt(0, 0, 0);
-        tempObject.rotateX(Math.PI / 2); // Lay flat on the sphere
+      // Exclude the last point (duplicate of the first)
+      const vertices = boundary.slice(0, -1).map(([lng, lat]) => {
+        const phi = (90 - lat) * (Math.PI / 180); // Latitude to polar angle
+        const theta = (lng + 180) * (Math.PI / 180); // Longitude to azimuthal angle
 
-        tempObject.updateMatrix();
-        mesh.setMatrixAt(i, tempObject.matrix);
+        const x = hexagonRadius * Math.sin(phi) * Math.cos(theta);
+        const y = hexagonRadius * Math.cos(phi);
+        const z = hexagonRadius * Math.sin(phi) * Math.sin(theta);
+
+        return new Vector3(x, y, z);
       });
 
-      // Add the color attribute
-      mesh.geometry.setAttribute(
-        'color',
-        new InstancedBufferAttribute(colors, 3)
-      );
+      return { vertices, hex }; // Return vertices and hex index
+    });
+  }, [hexagons, radius]);
 
-      mesh.instanceMatrix.needsUpdate = true;
-    }
-  }, [hexTileData, colors]);
-
-  // Handle tile interactions
-  // const handlePointerDown = (event: any) => {
-  //   event.stopPropagation();
-  //   const instanceId = event.instanceId;
-  //   if (instanceId !== undefined) {
-  //     const tileData = hexTileData[instanceId];
-  //     onTileClick(tileData.data);
-  //   }
-  // };
-
-  // const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
-  //   event.stopPropagation();
-  //   setHoveredInstanceId(event.instanceId!);
-  // };
-
-  // const handlePointerOut = () => {
-  //   setHoveredInstanceId(null);
-  // };
-
-  // useFrame(() => {
-  //   if (meshRef.current && colors) {
-  //     const color = new Color();
-  //     for (let i = 0; i < hexTileData.length; i++) {
-  //       if (i === hoveredInstanceId) {
-  //         color.set('hotpink'); // Highlight color on hover
-  //       } else {
-  //         color.set(hexTileData[i].color);
-  //       }
-  //       color.toArray(colors, i * 3);
-  //     }
-  //     if (meshRef.current.geometry.attributes.color) {
-  //       meshRef.current.geometry.attributes.color.needsUpdate = true;
-  //     }
-  //   }
-  // });
-
-  // const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
-  //   event.stopPropagation();
-  //   const instanceId = event.instanceId;
-  //   if (instanceId !== undefined) {
-  //     const tileData = hexTileData[instanceId];
-  //     onTileClick(tileData.data);
-  //   }
-  // };
+  console.log('hexagons.length', hexagons.length);
 
   return (
     <group>
-      {/* Mars sphere */}
+      {/* Render Mars sphere */}
       <mesh>
-        <sphereGeometry args={[radius, 64, 64]} />
+        <sphereGeometry args={[radius, 32, 32]} />
         <meshStandardMaterial map={texture} />
       </mesh>
 
-      {/* Hex tiles */}
-      <instancedMesh
-        ref={meshRef}
-        args={[undefined, undefined, hexTileData.length]}
-        // onPointerDown={handlePointerDown}
-        // onPointerMove={handlePointerMove}
-        // onPointerOut={handlePointerOut}
-      >
-        <cylinderGeometry args={[tileRadius, tileRadius, 0.0001, 6]} />
-        <meshStandardMaterial vertexColors />
-      </instancedMesh>
+      {/* Render hexagon tiles */}
+      {hexMeshes.map((hexMesh, index) => {
+        const geometry = new BufferGeometry();
+        const positions: number[] = [];
+
+        // Add vertex positions
+        hexMesh.vertices.forEach((vertex) => {
+          positions.push(vertex.x, vertex.y, vertex.z);
+        });
+
+        // Add positions to geometry
+        geometry.setAttribute(
+          'position',
+          new Float32BufferAttribute(positions, 3)
+        );
+
+        // Define indices for triangulation
+        const indices = [];
+        const numVertices = hexMesh.vertices.length;
+        for (let i = 1; i < numVertices - 1; i++) {
+          indices.push(0, i, i + 1);
+        }
+        // Close the last triangle
+        indices.push(0, numVertices - 1, 1);
+
+        geometry.setIndex(indices);
+
+        // Compute normals for proper lighting
+        geometry.computeVertexNormals();
+
+        return (
+          <mesh
+            key={index}
+            geometry={geometry}
+            // onPointerDown={() => onTileClick(hexMesh.hex)}
+          >
+            <meshStandardMaterial
+              color={`hsla(${(index * 137.508) % 360}, 100%, 70%)`}
+              side={DoubleSide}
+            />
+          </mesh>
+        );
+      })}
     </group>
   );
 };
