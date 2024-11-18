@@ -23,7 +23,15 @@
     "three": "^0.170.0"
   },
   "lint-staged": {
-    "**/*.{js,jsx,ts,tsx,json,css,scss,md}": "prettier --write"
+    "**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
@@ -33,7 +41,7 @@
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
-    "husky": "^9.1.6",
+    "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "postcss": "^8",
     "prettier": "^3.3.3",

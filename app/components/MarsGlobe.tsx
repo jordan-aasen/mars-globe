@@ -19,7 +19,6 @@ const MarsGlobe = () => {
   const hexagons = useMemo(() => {
     // Fetch base cells (res 0)
     const baseCells = h3.getRes0Cells();
-    console.log('baseCells', baseCells);
 
     // Collect all hexagons for the given resolution
     let allHexagons: string[] = [];
@@ -52,8 +51,6 @@ const MarsGlobe = () => {
       return { vertices, hex }; // Return vertices and hex index
     });
   }, [hexagons, radius]);
-
-  console.log('hexagons.length', hexagons.length);
 
   return (
     <group>
