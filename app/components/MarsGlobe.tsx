@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { useLoader } from '@react-three/fiber';
+import { useFrame, useLoader } from '@react-three/fiber';
 import * as h3 from 'h3-js';
 import {
   BackSide,
@@ -11,10 +11,16 @@ import {
   TextureLoader,
   Vector3,
 } from 'three';
+import { OrbitControls } from 'three-stdlib';
 
-const MarsGlobe = () => {
+const MarsGlobe = ({
+  controlsRef,
+  radius,
+}: {
+  controlsRef: React.MutableRefObject<OrbitControls>;
+  radius: number;
+}) => {
   const [selectedHexIndex, setSelectedHexIndex] = useState<number | null>(null);
-  const radius = 2; // Radius of the globe
   const resolution = 2; // H3 resolution level
   const texture = useLoader(TextureLoader, '/mars-texture.jpg');
 
@@ -49,8 +55,6 @@ const MarsGlobe = () => {
     for (let i = 1; i < numVertices - 1; i++) {
       indices.push(0, i, i + 1);
     }
-    // Close the last triangle
-    indices.push(0, numVertices - 1, 1);
 
     // Add positions and indices to geometry
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
@@ -163,6 +167,16 @@ const MarsGlobe = () => {
         return new Vector3(x, y, z);
       });
 
+      // Calculate center position in 3D space
+      const phiCenter = (90 - centerLat) * (Math.PI / 180);
+      const thetaCenter = (centerLng + 180) * (Math.PI / 180);
+
+      const center = new Vector3(
+        radius * Math.sin(phiCenter) * Math.cos(thetaCenter),
+        radius * Math.cos(phiCenter),
+        radius * Math.sin(phiCenter) * Math.sin(thetaCenter)
+      );
+
       // Assign a color to each hexMesh
       const color = ['#ff4141', '#00FF00', '#FFA500', '#808080'][index % 4];
 
@@ -170,7 +184,7 @@ const MarsGlobe = () => {
       const flatGeometry = createFlatGeometry(vertices);
       const extrudedGeometry = createExtrudedGeometry(vertices);
 
-      return { hex, color, flatGeometry, extrudedGeometry };
+      return { hex, color, flatGeometry, extrudedGeometry, center };
     });
   }, [hexagons, radius]);
 
@@ -201,6 +215,46 @@ const MarsGlobe = () => {
       materials.unselected.dispose();
     };
   }, [hexMeshes, materials]);
+
+  // Handle tile selection and update camera angles
+  useEffect(() => {
+    if (selectedHexIndex !== null && controlsRef.current) {
+      const selectedHex = hexMeshes[selectedHexIndex];
+      const tileCenter = selectedHex.center.clone().normalize();
+
+      // Calculate spherical coordinates (azimuthal and polar angles)
+      let azimuthalAngle = Math.atan2(tileCenter.x, tileCenter.z);
+      let polarAngle = Math.acos(tileCenter.y / tileCenter.length());
+
+      // Handle angle wrapping for azimuthal angle
+      const currentAzimuthal = controlsRef.current.getAzimuthalAngle();
+
+      // Calculate shortest angle difference
+      let deltaAzimuthal = azimuthalAngle - currentAzimuthal;
+      deltaAzimuthal = ((deltaAzimuthal + Math.PI) % (2 * Math.PI)) - Math.PI;
+
+      // Compute the new azimuthal angle
+      azimuthalAngle = currentAzimuthal + deltaAzimuthal;
+
+      // Update OrbitControls angles directly
+      controlsRef.current.setAzimuthalAngle(azimuthalAngle);
+      controlsRef.current.setPolarAngle(polarAngle);
+      controlsRef.current.update();
+    }
+  }, [selectedHexIndex, controlsRef, hexMeshes]);
+
+  useFrame(() => {
+    const camera = controlsRef.current.object;
+    const currentZoom = camera.position.length(); // Distance from the target
+
+    // Scale rotation and zoom speed inversely with zoom level
+    const rotateSpeed = 0.005 * currentZoom ** 2; // Adjust to preference
+    const zoomSpeed = 0.006 * currentZoom ** 2; // Adjust to preference
+
+    // Update OrbitControls
+    controlsRef.current.rotateSpeed = rotateSpeed;
+    controlsRef.current.zoomSpeed = zoomSpeed;
+  });
 
   return (
     <group>
