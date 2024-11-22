@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a fully interactive 3d mars globe completely divided into hexagons using Three.js and Uber's h3.js. Enjoy!
 
 ## Getting Started
 
